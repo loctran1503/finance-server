@@ -1,1 +1,2 @@
+
 npm run migration:generate src/db/migrations/[MigrationName]
