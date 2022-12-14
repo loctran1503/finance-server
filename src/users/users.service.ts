@@ -44,7 +44,9 @@ export class UsersService {
           })
           .returning('*')
           .execute();
-        this.setCookie(newUser.raw.userId, res);
+   
+          
+        this.setCookie(newUser.raw[0].userId, res);
         return {
           code: 200,
           success: true,
@@ -101,13 +103,15 @@ export class UsersService {
 
   logout(response : Response) : DefaultResponse {
     try {
-        response.clearCookie(this.config.get('COOKIE_NAME'),{
+       const result = response.clearCookie(this.config.get('COOKIE_NAME'),{
    
             httpOnly: true,
             secure: true,
             sameSite: 'lax',
-            path: '/users/checkAuth',
+            path: this.config.get('COOKIE_PATH'),
           })
+        
+          
         return{
           success:true,
           code:200,
@@ -168,6 +172,7 @@ export class UsersService {
         code:200,
         success:true,
         user:userExisting,
+        access_token:await this.signToken(userExisting.userId, 'access'),
         message:"Authenticated"
     }
 
@@ -189,7 +194,7 @@ export class UsersService {
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
-      path: '/users/checkAuth',
+      path: this.config.get('COOKIE_PATH'),
     });
   }
   signToken(userId: string, type: 'access' | 'refresh'): Promise<string> {

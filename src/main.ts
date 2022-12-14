@@ -7,12 +7,13 @@ import { isProduction } from './utils/constants';
 async function bootstrap() {
   
   const app = await NestFactory.create(AppModule,{cors:{
-    origin:isProduction ? process.env.CORS_DEV : process.env.CORS_PROD,
+    origin:isProduction ? process.env.CORS_PROD : process.env.CORS_DEV,
     credentials:true
   }});
  
   app.useGlobalPipes(new ValidationPipe());
   app.use(cookieParser());
-  await app.listen(5000);
+  app.setGlobalPrefix('finance/api')
+  await app.listen(4444);
 }
 bootstrap();
