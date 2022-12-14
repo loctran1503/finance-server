@@ -17,9 +17,12 @@ import { DataSource } from 'typeorm';
 import { ChatService } from './chat.service';
 import 'dotenv/config'
 @WebSocketGateway({
+  transports:['websocket'],
   cors: {
     origin:isProduction ? process.env.CORS_PROD : process.env.CORS_DEV
   },
+  namespace:'finance/api',
+  path:'/finance/api/socket.io'
 })
 export class ChatGateWay implements OnGatewayInit, OnGatewayDisconnect {
   @WebSocketServer() socket: Server;

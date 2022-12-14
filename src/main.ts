@@ -14,6 +14,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
   app.use(cookieParser());
   app.setGlobalPrefix('finance/api')
+ 
   await app.listen(4444);
 }
 bootstrap();
