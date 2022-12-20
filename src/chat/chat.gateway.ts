@@ -16,6 +16,11 @@ import { isProduction } from 'src/utils/constants';
 import { DataSource } from 'typeorm';
 import { ChatService } from './chat.service';
 import 'dotenv/config'
+
+import SocketManager from '../utils/SocketManager';
+import { Message } from '../users/entities/message.entity';
+import MessageBlocker from '../utils/MessageBlocker';
+import { Cron, CronExpression } from '@nestjs/schedule';
 @WebSocketGateway({
   transports:['websocket'],
   cors: {
@@ -33,14 +38,36 @@ export class ChatGateWay implements OnGatewayInit, OnGatewayDisconnect {
   ) {}
   listenForMessages() {
     this.socket.on('connection', (ws) => {
-      console.log(ws.id, 'is connecting.....');
+      //console.log(ws.id, 'is connecting.....');
     });
   }
   afterInit(socket: Server) {
     this.listenForMessages();
   }
   handleDisconnect(@ConnectedSocket() client: any) {
-    console.log(`Client disconnected: ${client.id}`);
+   
+    const result = SocketManager.deleteSocket(client.id)
+    console.log('Clients disconect...');
+    
+    console.log(result);
+    
+  }
+
+  @SubscribeMessage('client-send-indentify')
+  async clientSendIndentify(@MessageBody('name') name: string,@ConnectedSocket() client: Socket){
+    try {
+      const result = SocketManager.insertSocket({
+        name,
+        socketId:client.id
+      })
+      console.log('Client-connecting...');
+      
+      console.log(result);
+      
+    } catch (error) {
+      console.log(`Chat.gateway.ts - client-send-identify error:${JSON.stringify(error)}`);
+      
+    }
   }
 
   @SubscribeMessage('client-send-message')
@@ -64,16 +91,28 @@ export class ChatGateWay implements OnGatewayInit, OnGatewayDisconnect {
           .getOne();
         if (!userExisting) throw new UnauthorizedException('user not found');
 
-          
-          
+       
 
-        const result = this.socket.emit('server-send-message', {
-          ...userExisting,
-          message,
-          timestamp: this.formatDate(new Date()),
-        });
-     
-        
+        //Check is blocking
+        const timestampBlocking = MessageBlocker.findUserIsBlocking(userExisting.userId)
+        if(timestampBlocking===0) throw new Error('User Is Blocking...,Can not send message')
+
+       
+        const newMessage = await this.dataSource.createQueryBuilder().insert().into(Message).values({
+          content:message,
+          user:userExisting
+        }).returning(['messageId','content','timestamp']).execute()
+
+        const messageForClient = {
+          ...newMessage.generatedMaps[0],
+          user:{
+            userId:userExisting.userId,
+            name:userExisting.name,
+            avatar:userExisting.avatar
+          },
+          timestampBlocking
+        }
+        this.socket.emit('server-send-message', messageForClient);
       }
     } catch (error) {
       console.log(
@@ -81,6 +120,18 @@ export class ChatGateWay implements OnGatewayInit, OnGatewayDisconnect {
       );
     }
   }
+
+  @Cron(CronExpression.EVERY_DAY_AT_3PM)
+  async handleDeleteMessage(){
+    try {
+      await this.dataSource.getRepository(Message).clear()
+    } catch (error) {
+      console.log(`handleDeleteMessage Interal Server Error: ${JSON.stringify(error)}`);
+      
+    }
+    
+  }
+
 
   formatDate(date : Date) {
     return [

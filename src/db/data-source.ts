@@ -33,7 +33,7 @@ export class TypeOrmConfig {
         database: configService.get('DB_DEV'),
         entities: ['dist/**/entities/*.entity.js'],
         migrations: ['dist/db/migrations/*.js'],
-        logging: true,
+        logging: configService.get('NODE_ENV')==='production',
         
       };
     }

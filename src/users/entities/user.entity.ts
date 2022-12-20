@@ -1,4 +1,5 @@
-import {Entity,PrimaryGeneratedColumn,Column,CreateDateColumn} from 'typeorm'
+import {Entity,PrimaryGeneratedColumn,Column,CreateDateColumn, OneToMany} from 'typeorm'
+import { Message } from './message.entity'
 
 @Entity()
 export class User{
@@ -9,7 +10,7 @@ export class User{
     firebaseId:string
 
 
-    @Column()
+    @Column()  
     name:string
 
     @Column()
@@ -17,4 +18,7 @@ export class User{
 
     @CreateDateColumn()
     createdAt:Date
+
+    @OneToMany(() => Message,message => message.user,{nullable:true})  
+    messages:Message
 }

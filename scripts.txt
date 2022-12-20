@@ -1,2 +1,4 @@
 
-npm run migration:generate src/db/migrations/[MigrationName]
+npm run migration:generate:dev src/db/migrations/[MigrationName]
+npm run migration:generate:prod src/db/migrations/[MigrationName]
+
