@@ -1,7 +1,7 @@
 import {Entity,PrimaryGeneratedColumn,Column,CreateDateColumn, OneToMany} from 'typeorm'
 import { Message } from './message.entity'
 
-@Entity()
+@Entity({name:'users'})
 export class User{
     @PrimaryGeneratedColumn("uuid")
     userId:string

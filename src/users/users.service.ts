@@ -2,7 +2,7 @@ import { Injectable, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Request, Response } from 'express';
-import { DataSource, FindManyOptions, LessThan } from 'typeorm';
+import { DataSource, FileLogger, FindManyOptions, LessThan } from 'typeorm';
 import {
   CreateUserDto,
   MessagePaginateDto,
@@ -30,9 +30,9 @@ export class UsersService {
     try {
       const userExisting = await this.dataSource
         .createQueryBuilder()
-        .select('user.name')
-        .from(User, 'user')
-        .where('user.firebaseId=:id', { id: dto.firebaseId })
+        .select('users.name')
+        .from(User, 'users')
+        .where('users.firebaseId=:id', { id: dto.firebaseId })
         .getOne();
       if (userExisting) {
         return {
@@ -78,9 +78,9 @@ export class UsersService {
     try {
       const userExisting = await this.dataSource
         .createQueryBuilder()
-        .select('user')
-        .from(User, 'user')
-        .where('user.firebaseId=:id', { id: dto.firebaseId })
+        .select('users')
+        .from(User, 'users')
+        .where('users.firebaseId=:id', { id: dto.firebaseId })
         .getOne();
       if (!userExisting) {
         return {
@@ -160,9 +160,9 @@ export class UsersService {
         };
       const userExisting = await this.dataSource
         .createQueryBuilder()
-        .select('user')
-        .from(User, 'user')
-        .where('user.userId=:id', { id: decoded.sub })
+        .select('users')
+        .from(User, 'users')
+        .where('users.userId=:id', { id: decoded.sub })
         .getOne();
       if (!userExisting)
         return {
@@ -235,7 +235,9 @@ export class UsersService {
           timestamp:'DESC'
         },
         take:MESSAGE_LIMIT,
-        relations: ['user'],
+        relations:{
+          user:true
+        },
       };
       if (dto.timestamp)
         findOptions.where = {
@@ -262,6 +264,7 @@ export class UsersService {
       }else{
         hasMore=messageList.length>=MESSAGE_LIMIT
       }
+
       
         
       return {
@@ -269,12 +272,14 @@ export class UsersService {
         success: true,
         message: 'get all user message successfully!',
         messageList,
-        hasMore
+        hasMore:true
       };
     } catch (error) {
-      console.log(
-        `get message list server internal error:${JSON.stringify(error)}`,
-      );
+      console.log("get message list server internal error");
+      
+      console.log(error);
+      
+      
 
       return {
         code: 500,

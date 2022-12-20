@@ -85,9 +85,9 @@ export class ChatGateWay implements OnGatewayInit, OnGatewayDisconnect {
       if (decoded.sub) {
         const userExisting = await this.dataSource
           .createQueryBuilder()
-          .select('user')
-          .from(User, 'user')
-          .where('user.userId=:id', { id: decoded.sub })
+          .select('users')
+          .from(User, 'users')
+          .where('users.userId=:id', { id: decoded.sub })
           .getOne();
         if (!userExisting) throw new UnauthorizedException('user not found');
 
