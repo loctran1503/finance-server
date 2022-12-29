@@ -17,8 +17,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: {sub:string}) {
-    const userExisting = await this.dataSource.createQueryBuilder().select('user').from(User,'user').where("user.firebaseId=:id",{id:payload.sub}).getOne();
-    console.log(userExisting)
+
+    
+    const userExisting = await this.dataSource.getRepository(User).findOne({
+      where:{
+        userId:payload.sub
+      },
+    
+    });
+  
     if(userExisting) return userExisting
     else throw new UnauthorizedException("User not found")
  

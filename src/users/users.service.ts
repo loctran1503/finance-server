@@ -5,8 +5,7 @@ import { Request, Response } from 'express';
 import { DataSource, FileLogger, FindManyOptions, LessThan } from 'typeorm';
 import {
   CreateUserDto,
-  MessagePaginateDto,
-  MessageResponse,
+  UserListResponse,
   UserLoginDto,
   UserResponse,
 } from './dto';
@@ -14,7 +13,7 @@ import { User } from './entities/user.entity';
 import { JwtGuard } from './guard';
 import { Secret, verify, JwtPayload } from 'jsonwebtoken';
 import { DefaultResponse } from './dto/other';
-import { Message } from './entities/message.entity';
+import { Message } from '../messages/entities/message.entity';
 import { MESSAGE_LIMIT } from 'src/utils/constants';
 
 @Injectable()
@@ -158,12 +157,21 @@ export class UsersService {
           success: false,
           message: 'Refresh Token invalid',
         };
-      const userExisting = await this.dataSource
-        .createQueryBuilder()
-        .select('users')
-        .from(User, 'users')
-        .where('users.userId=:id', { id: decoded.sub })
-        .getOne();
+      const userExisting = await this.dataSource.getRepository(User).findOne({
+        where: {
+          userId: decoded.sub,
+        },
+        order:{
+          events:{
+            createdAt:'ASC'
+          }
+        },
+        relations: {
+          coins: true,
+          events:true
+        }
+     
+      });
       if (!userExisting)
         return {
           code: 400,
@@ -179,15 +187,49 @@ export class UsersService {
         message: 'Authenticated',
       };
     } catch (error) {
+      console.log(`check authenticate internal server error:`);
+      console.log(error);
+
       return {
         code: 500,
         success: false,
-        message: `check authenticate internal server error:${JSON.stringify(
-          error,
-        )}`,
+        message: `check authenticate internal server error:`,
       };
     }
   }
+
+  async findAll(): Promise<UserListResponse> {
+    try {
+      const userList = await this.dataSource.getRepository(User).find({
+        order:{
+          usd:'DESC',
+          usdt:'DESC',
+          createdAt:'ASC',
+          
+        },
+        
+        relations:{
+          coins:true,
+          events:true
+        }
+      })
+      return{
+        success:true,
+        code:200,
+        message:'get list user successfully!',
+        userList
+      }
+    } catch (error) {
+      console.log(`findAll server error:`);
+      console.log(error);
+      return {
+        code: 500,
+        success: false,
+        message: `findAll server error:`,
+      };
+    }
+  }
+
   async setCookie(userId: string, res: Response) {
     const refresh_token = await this.signToken(userId, 'refresh');
     res.cookie(this.config.get('COOKIE_NAME'), refresh_token, {
@@ -216,76 +258,6 @@ export class UsersService {
           });
     } catch (error) {
       throw error;
-    }
-  }
-
-  // Message
-  async getMessage(dto: MessagePaginateDto): Promise<MessageResponse> {
-    try {
-      // const messageList = await this.dataSource
-      //   .getRepository(Message)
-      //   .createQueryBuilder('message')
-      //   .leftJoin('message.user', 'user')
-      //   .addSelect(['user.name','user.avatar','user.userId'])
-
-      //   .getMany();
-      let findOptions : FindManyOptions<Message> = {
-        where: {},
-        order:{
-          timestamp:'DESC'
-        },
-        take:MESSAGE_LIMIT,
-        relations:{
-          user:true
-        },
-      };
-      if (dto.timestamp)
-        findOptions.where = {
-          timestamp: LessThan(dto.timestamp),
-        };
-
-      const messageList = await this.dataSource
-        .getRepository(Message)
-        .find(findOptions);
-   
-
-      const firstMessage = await this.dataSource.getRepository(Message).find({
-        take:1,
-        order:{
-          timestamp:'ASC'
-        }
-      })
-
-      let hasMore : boolean
-      
-      
-      if(dto.timestamp){
-        hasMore= new Date(dto.timestamp).valueOf()!==new Date(firstMessage[0].timestamp).valueOf()
-      }else{
-        hasMore=messageList.length>=MESSAGE_LIMIT
-      }
-
-      
-        
-      return {
-        code: 200,
-        success: true,
-        message: 'get all user message successfully!',
-        messageList,
-        hasMore:true
-      };
-    } catch (error) {
-      console.log("get message list server internal error");
-      
-      console.log(error);
-      
-      
-
-      return {
-        code: 500,
-        success: false,
-        message: JSON.stringify(error),
-      };
     }
   }
 }

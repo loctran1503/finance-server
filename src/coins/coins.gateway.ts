@@ -15,7 +15,7 @@ import { Server, Socket } from 'socket.io';
 import { User } from 'src/users/entities/user.entity';
 import { isProduction } from 'src/utils/constants';
 import { DataSource } from 'typeorm';
-import { ChatService } from './chat.service';
+
 
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Message } from '../messages/entities/message.entity';
@@ -27,14 +27,14 @@ import SocketManager from '../utils/SocketManager';
   cors: {
     origin: isProduction ? process.env.CORS_PROD : process.env.CORS_DEV,
   },
-  namespace: 'finance/api/chat',
-  path: '/finance/api/chat/socket.io',
+  namespace: 'finance/api/coins',
+  path: '/finance/api/coins/socket.io',
 })
-export class ChatGateWay implements OnGatewayInit, OnGatewayDisconnect {
+export class CoinsGateWay implements OnGatewayInit, OnGatewayDisconnect {
   
   @WebSocketServer() socket: Server;
   constructor(
-    private chatService: ChatService,
+ 
     private dataSource: DataSource,
     private config: ConfigService,
   ) {}
@@ -48,7 +48,7 @@ export class ChatGateWay implements OnGatewayInit, OnGatewayDisconnect {
   }
   handleDisconnect(@ConnectedSocket() client: any) {
     const result = SocketManager.deleteSocket(client.id);
-    console.log('Clients disconect...');
+    console.log('Clients disconect coins gateway...');
 
     console.log(result);
   }
@@ -73,57 +73,33 @@ export class ChatGateWay implements OnGatewayInit, OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('client-send-message')
-  async test(
-    @MessageBody('message') message: string,
+  @SubscribeMessage('client-convert-usd-to-usdt')
+  async convertToUsdt(
+    @MessageBody('amount') amount: number,
     @ConnectedSocket() client: Socket,
   ) {
     try {
+
+      if(typeof amount !=='number') throw new Error('usd type not valid')
+
       const token = client.handshake.auth.token;
-      console.log(client.handshake.auth);
-      
+
       const decoded = verify(
         token,
         this.config.get('ACCESS_TOKEN_SECRET'),
       ) as JwtPayload & { sub: string };
-      if (decoded.sub) {
-        const userExisting = await this.dataSource
+      if (!decoded.sub) throw new Error('decoded.sub not found')
+      const userExisting = await this.dataSource
           .createQueryBuilder()
           .select('users')
           .from(User, 'users')
           .where('users.userId=:id', { id: decoded.sub })
           .getOne();
         if (!userExisting) throw new UnauthorizedException('user not found');
+      
+      
+     
 
-        //Check is blocking
-        const timestampBlocking = MessageBlocker.findUserIsBlocking(
-          userExisting.userId,
-        );
-        if (timestampBlocking === 0)
-          throw new Error('User Is Blocking...,Can not send message');
-
-        const newMessage = await this.dataSource
-          .createQueryBuilder()
-          .insert()
-          .into(Message)
-          .values({
-            content: message,
-            user: userExisting,
-          })
-          .returning(['messageId', 'content', 'timestamp'])
-          .execute();
-
-        const messageForClient = {
-          ...newMessage.generatedMaps[0],
-          user: {
-            userId: userExisting.userId,
-            name: userExisting.name,
-            avatar: userExisting.avatar,
-          },
-          timestampBlocking,
-        };
-        this.socket.emit('server-send-message', messageForClient);
-      }
     } catch (error) {
       console.log(
         `Chat.gateway.ts - client-send-message error:${JSON.stringify(error)}`,
@@ -131,14 +107,4 @@ export class ChatGateWay implements OnGatewayInit, OnGatewayDisconnect {
     }
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_3PM)
-  async handleDeleteMessage() {
-    try {
-      await this.dataSource.getRepository(Message).clear();
-    } catch (error) {
-      console.log(
-        `handleDeleteMessage Interal Server Error: ${JSON.stringify(error)}`,
-      );
-    }
-  }
 }

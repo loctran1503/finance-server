@@ -11,36 +11,16 @@ export class CreateUserDto{
     name:string;
 }
 
-export class MessagePaginateDto{
-    timestamp?:Date
-
-}
-
 export class UserLoginDto{
     @IsNotEmpty()
     firebaseId:string
 }
 
-
-
- interface MessageIO{
-    content:string,
-    timestamp:Date,
-    messageId:string
-    user:{
-        userId:string
-        name:string,
-        avatar:string
-    }
-}
-
-export interface MessageResponse extends DefaultResponse{
-    messageList?:MessageIO[],
-    hasMore?:boolean
+export interface UserListResponse extends DefaultResponse{
+    userList?:User[]
 }
 
 export interface UserResponse extends DefaultResponse{
-
     access_token?:string;
     user?:User
 }

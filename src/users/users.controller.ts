@@ -1,9 +1,9 @@
-import { Body, Controller, Post, UseGuards, Res, Req, Get } from '@nestjs/common';
+import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CreateUserDto, MessagePaginateDto, UserLoginDto } from './dto';
+import { Request, Response } from 'express';
+import { CreateUserDto, UserLoginDto } from './dto';
 import { JwtGuard } from './guard';
 import { UsersService } from './users.service';
-import { Request, Response } from 'express';
 
 @Controller('users')
 export class UsersController {
@@ -29,15 +29,15 @@ export class UsersController {
         return this.userService.logout(response)
     }
 
-    @Post('getMessage')
-    getMessage(@Body() dto : MessagePaginateDto){
-        return this.userService.getMessage(dto)
+    @Post('findAll')
+    findAll(){
+        return this.userService.findAll()
     }
 
-    // @Post('me')
-    // // @UseGuards(JwtGuard)
-    // me(@Request() req){
+    @Post('me')
+    @UseGuards(JwtGuard)
+    me(@Req() req){
         
-    //     return req.user
-    // }
+        return req.headers
+    }
 }
