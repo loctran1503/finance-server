@@ -131,14 +131,14 @@ export class ChatGateWay implements OnGatewayInit, OnGatewayDisconnect {
     }
   }
 
-  @Cron(CronExpression.EVERY_DAY_AT_3PM)
-  async handleDeleteMessage() {
-    try {
-      await this.dataSource.getRepository(Message).clear();
-    } catch (error) {
-      console.log(
-        `handleDeleteMessage Interal Server Error: ${JSON.stringify(error)}`,
-      );
-    }
-  }
+  // @Cron(CronExpression.EVERY_DAY_AT_3PM)
+  // async handleDeleteMessage() {
+  //   try {
+  //     await this.dataSource.getRepository(Message).clear();
+  //   } catch (error) {
+  //     console.log(
+  //       `handleDeleteMessage Interal Server Error: ${JSON.stringify(error)}`,
+  //     );
+  //   }
+  // }
 }
